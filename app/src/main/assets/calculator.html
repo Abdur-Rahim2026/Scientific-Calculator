@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#262a30"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="SciCalc"/>
+  <title>Scientific Calculator</title>
+
+  <!-- Complete Web Manifest with Embedded Icon (Resolves Chrome "Cannot Install" Error) -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"Scientific Calculator","short_name":"SciCalc","start_url":".","display":"standalone","background_color":"#111417","theme_color":"#262a30","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22%3E%3Crect width=%22512%22 height=%22512%22 rx=%22100%22 fill=%22%23262a30%22/%3E%3Crect x=%2260%22 y=%2260%22 width=%22392%22 height=%22120%22 rx=%2216%22 fill=%22%23eef3eb%22/%3E%3Ccircle cx=%22130%22 cy=%22260%22 r=%2235%22 fill=%22%23eab308%22/%3E%3Ccircle cx=%22256%22 cy=%22260%22 r=%2235%22 fill=%22%23d96924%22/%3E%3Ccircle cx=%22382%22 cy=%22260%22 r=%2235%22 fill=%22%23b0b8c1%22/%3E%3Ccircle cx=%22130%22 cy=%22380%22 r=%2235%22 fill=%22%23b0b8c1%22/%3E%3Ccircle cx=%22256%22 cy=%22380%22 r=%2235%22 fill=%22%23b0b8c1%22/%3E%3Ccircle cx=%22382%22 cy=%22380%22 r=%2235%22 fill=%22%233b82f6%22/%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
+
+  <style>
+    :root {
+      --body-edge: #15181b;
+      --lcd-bg: #eef3eb;
+      --lcd-off: #1b1e22;
+      --lcd-text: #111418;
+      --lbl-shift: #eab308;
+      --lbl-alpha: #f87171;
+      --btn-fn: #24272c;
+      --btn-fn-hover: #34383f;
+      --btn-num: #b0b8c1;
+      --btn-num-hover: #c4ccd6;
+      --btn-op: #9ea7b0;
+      --btn-orange: #d96924;
+      --btn-orange-hover: #ea7933;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      min-height: 100vh;
+      background: #111417;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 8px;
+    }
+
+    .calculator {
+      width: 100%;
+      max-width: 410px;
+      background: linear-gradient(180deg, #373d45 0%, #262a30 100%);
+      border-radius: 26px;
+      padding: 12px 14px 18px 14px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.75), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+      border: 2px solid var(--body-edge);
+    }
+
+    .lcd-screen {
+      background: var(--lcd-bg);
+      border-radius: 6px;
+      border: 3px solid #14171a;
+      box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.35);
+      padding: 6px 10px 8px 10px;
+      height: 125px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background 0.3s ease;
+    }
+
+    .lcd-screen.power-off {
+      background: var(--lcd-off) !important;
+      box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.8) !important;
+    }
+
+    .lcd-screen.power-off * {
+      opacity: 0 !important;
+    }
+
+    .lcd-indicators {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--lcd-text);
+      letter-spacing: 0.5px;
+      min-height: 16px;
+    }
+
+    .ind-dim { opacity: 0.15; }
+    .ind-lit { opacity: 1; color: #000; }
+
+    .lcd-expression {
+      font-size: 1.55rem;
+      font-family: "Courier New", Courier, monospace;
+      font-weight: 700;
+      color: var(--lcd-text);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      display: flex;
+      align-items: center;
+      min-height: 2.2rem;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1.35rem;
+      background: #111;
+      animation: blink 1s step-start infinite;
+      margin: 0 1px;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .lcd-result {
+      text-align: right;
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--lcd-text);
+      white-space: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      font-family: "Courier New", Courier, monospace;
+      min-height: 2rem;
+    }
+
+    .brand-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 6px 4px 6px;
+    }
+
+    .brand-title {
+      color: #e5a93b;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    .top-controls {
+      display: grid;
+      grid-template-columns: 1fr 136px;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .top-left-keys {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+
+    .dpad-container {
+      position: relative;
+      width: 130px;
+      height: 76px;
+      background: radial-gradient(circle, #ced5de 30%, #88929e 100%);
+      border-radius: 50%;
+      border: 2px solid #202327;
+      box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), 0 3px 6px rgba(0, 0, 0, 0.5);
+      margin: 0 auto;
+    }
+
+    .dpad-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px;
+      height: 26px;
+      background: #2b3036;
+      border-radius: 50%;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+    }
+
+    .dpad-btn {
+      position: absolute;
+      background: none;
+      border: none;
+      color: #242930;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .dpad-btn:active { color: #f97316; }
+    .dpad-up { top: 2px; left: 50%; transform: translateX(-50%); width: 44px; height: 22px; }
+    .dpad-down { bottom: 2px; left: 50%; transform: translateX(-50%); width: 44px; height: 22px; }
+    .dpad-left { left: 2px; top: 50%; transform: translateY(-50%); width: 26px; height: 42px; }
+    .dpad-right { right: 2px; top: 50%; transform: translateY(-50%); width: 26px; height: 42px; }
+
+    .key-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .labels {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      font-size: 0.61rem;
+      font-weight: 700;
+      line-height: 1.1;
+      padding: 0 1px;
+      height: 11px;
+      overflow: hidden;
+    }
+
+    .lbl-s { color: var(--lbl-shift); }
+    .lbl-a { color: var(--lbl-alpha); }
+
+    .btn {
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.6);
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      outline: none;
+    }
+
+    .btn:active {
+      transform: translateY(2px);
+      box-shadow: none !important;
+    }
+
+    .btn-fn {
+      background: linear-gradient(180deg, #373b42 0%, var(--btn-fn) 100%);
+      color: #f3f4f6;
+      height: 28px;
+      font-size: 0.78rem;
+      box-shadow: 0 3px 0 #131518, 0 3px 5px rgba(0,0,0,0.4);
+    }
+
+    .grid-sci {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 3px 4px;
+      margin-bottom: 5px;
+    }
+
+    .grid-main {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px 4px;
+    }
+
+    .btn-num {
+      background: linear-gradient(180deg, #cbd2db 0%, var(--btn-num) 100%);
+      color: #111827;
+      height: 38px;
+      font-size: 1.15rem;
+      border-radius: 7px;
+      box-shadow: 0 3px 0 #737c86, 0 3px 5px rgba(0,0,0,0.4);
+    }
+    .btn-num:hover { background: var(--btn-num-hover); }
+
+    .btn-op {
+      background: linear-gradient(180deg, #bdc5cf 0%, var(--btn-op) 100%);
+      color: #111827;
+      height: 38px;
+      font-size: 1.15rem;
+      border-radius: 7px;
+      box-shadow: 0 3px 0 #6e7781, 0 3px 5px rgba(0,0,0,0.4);
+    }
+
+    .btn-orange {
+      background: linear-gradient(180deg, #f07b34 0%, var(--btn-orange) 100%);
+      color: #ffffff;
+      height: 38px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border-radius: 7px;
+      box-shadow: 0 3px 0 #923f0d, 0 3px 5px rgba(0,0,0,0.4);
+    }
+
+    .active-btn {
+      background: var(--lbl-shift) !important;
+      color: #000 !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="calculator">
+    <!-- LCD Display -->
+    <div class="lcd-screen" id="lcd">
+      <div class="lcd-indicators">
+        <span id="ind-shift" class="ind-dim">S</span>
+        <span id="ind-alpha" class="ind-dim">A</span>
+        <span id="ind-hyp" class="ind-dim">hyp</span>
+        <span id="ind-mem" class="ind-dim">M</span>
+        <span id="ind-sto" class="ind-dim">STO</span>
+        <span id="ind-rcl" class="ind-dim">RCL</span>
+        <span id="ind-angle" class="ind-lit">DEG</span>
+        <span class="ind-lit">Norm</span>
+      </div>
+      <div class="lcd-expression" id="expr-box">
+        <span id="expr-left">56622×6522</span>
+        <span class="cursor" id="cursor"></span>
+        <span id="expr-right"></span>
+      </div>
+      <div class="lcd-result" id="res">369,288,684</div>
+    </div>
+
+    <!-- Brand Bar -->
+    <div class="brand-bar">
+      <div class="brand-title">REALMAX <span style="font-size: 0.65rem; color: #aaa;">PRO</span></div>
+      <div style="color: #9ca3af; font-size: 0.9rem;">fx-991MS</div>
+    </div>
+
+    <!-- Top Keypad + D-Pad -->
+    <div class="top-controls">
+      <div class="top-left-keys">
+        <div class="key-wrapper">
+          <div class="labels"><span></span></div>
+          <button class="btn btn-fn" id="btn-shift" onclick="pressShift()">SHIFT</button>
+        </div>
+        <div class="key-wrapper">
+          <div class="labels"><span></span></div>
+          <button class="btn btn-fn" id="btn-alpha" style="color: var(--lbl-alpha);" onclick="pressAlpha()">Alpha</button>
+        </div>
+        <div class="key-wrapper">
+          <div class="labels"><span></span></div>
+          <button class="btn btn-fn" onclick="toggleDRG()">DRG</button>
+        </div>
+
+        <div class="key-wrapper">
+          <div class="labels"><span class="lbl-s">CLR</span></div>
+          <button class="btn btn-fn" onclick="pressMode()">MODE</button>
+        </div>
+        <div class="key-wrapper">
+          <div class="labels"><span class="lbl-s">CONV</span></div>
+          <button class="btn btn-fn" onclick="insertConstant()">CONST</button>
+        </div>
+        <div class="key-wrapper">
+          <div class="labels"><span class="lbl-s">X!</span></div>
+          <button class="btn btn-fn" onclick="handleKey('^(-1)', '!')">X ⁻¹</button>
+        </div>
+      </div>
+
+      <!-- Functional Replay D-Pad -->
+      <div class="dpad-container">
+        <button class="dpad-btn dpad-up" onclick="historyBack()">▲</button>
+        <button class="dpad-btn dpad-left" onclick="moveCursorLeft()">◀</button>
+        <div class="dpad-center"></div>
+        <button class="dpad-btn dpad-right" onclick="moveCursorRight()">▶</button>
+        <button class="dpad-btn dpad-down" onclick="historyForward()">▼</button>
+      </div>
+    </div>
+
+    <!-- Middle Scientific Keys (6 cols) -->
+    <div class="grid-sci">
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">a b/c</span></div>
+        <button class="btn btn-fn" onclick="handleKey('/', '/')">d/c</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">³√</span></div>
+        <button class="btn btn-fn" onclick="handleKey('√(', '³√(')">√</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">X³</span></div>
+        <button class="btn btn-fn" onclick="handleKey('^2', '^3')">X²</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">x√</span></div>
+        <button class="btn btn-fn" onclick="handleKey('^', 'x√')">^</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">10^x</span></div>
+        <button class="btn btn-fn" onclick="handleKey('log(', '10^(')">log</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">e^x</span></div>
+        <button class="btn btn-fn" onclick="handleKey('ln(', 'e^(')">ln</button>
+      </div>
+
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-a">A</span></div>
+        <button class="btn btn-fn" onclick="handleVarKey('(-)', 'A')">(-)</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-a">B</span></div>
+        <button class="btn btn-fn" onclick="handleVarKey('ENG', 'B')">ENG</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s"></span><span class="lbl-a">C</span></div>
+        <button class="btn btn-fn" onclick="handleHypKey('C')">Hyp</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">sin⁻¹</span><span class="lbl-a">D</span></div>
+        <button class="btn btn-fn" onclick="handleTrigKey('sin', 'D')">Sin</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">cos⁻¹</span><span class="lbl-a">E</span></div>
+        <button class="btn btn-fn" onclick="handleTrigKey('cos', 'E')">Cos</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">tan⁻¹</span><span class="lbl-a">F</span></div>
+        <button class="btn btn-fn" onclick="handleTrigKey('tan', 'F')">Tan</button>
+      </div>
+
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">STO</span></div>
+        <button class="btn btn-fn" onclick="handleStoRcl()">RCL</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">←</span><span class="lbl-a">X</span></div>
+        <button class="btn btn-fn" onclick="handleVarKey('°', 'X')">° ' "</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">d/dx</span><span class="lbl-a">Y</span></div>
+        <button class="btn btn-fn" onclick="handleVarKey('(', 'Y')">(</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">;</span><span class="lbl-a">Z</span></div>
+        <button class="btn btn-fn" onclick="handleVarKey(')', 'Z')">)</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">0.00</span></div>
+        <button class="btn btn-fn" onclick="handleKey(',', ',')">,</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">M-</span><span class="lbl-a">M</span></div>
+        <button class="btn btn-fn" onclick="handleMemoryKey()">M+</button>
+      </div>
+    </div>
+
+    <!-- Main Number Keypad (5 cols) -->
+    <div class="grid-main">
+      <!-- 7, 8, 9 with Long-Press (M, G, T) -->
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">M</span></div>
+        <button class="btn btn-num digit-key" data-digit="7" data-alt="M">7</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">G</span></div>
+        <button class="btn btn-num digit-key" data-digit="8" data-alt="G">8</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">T</span></div>
+        <button class="btn btn-num digit-key" data-digit="9" data-alt="T">9</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">INS</span></div>
+        <button class="btn btn-orange" onclick="deleteChar()">DEL</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">OFF</span></div>
+        <button class="btn btn-orange" onclick="pressAC()">AC</button>
+      </div>
+
+      <!-- 4, 5, 6 with Long-Press (μ, m, k) -->
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">μ</span></div>
+        <button class="btn btn-num digit-key" data-digit="4" data-alt="μ">4</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">m</span></div>
+        <button class="btn btn-num digit-key" data-digit="5" data-alt="m">5</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">k</span></div>
+        <button class="btn btn-num digit-key" data-digit="6" data-alt="k">6</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">nCr</span></div>
+        <button class="btn btn-op" onclick="handleKey('×', 'nCr')">×</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">nPr</span></div>
+        <button class="btn btn-op" onclick="handleKey('÷', 'nPr')">÷</button>
+      </div>
+
+      <!-- 1, 2, 3 with Long-Press (f, p, n) -->
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">f</span></div>
+        <button class="btn btn-num digit-key" data-digit="1" data-alt="f">1</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">p</span></div>
+        <button class="btn btn-num digit-key" data-digit="2" data-alt="p">2</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">n</span></div>
+        <button class="btn btn-num digit-key" data-digit="3" data-alt="n">3</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">Pol</span></div>
+        <button class="btn btn-op" onclick="handleKey('+', 'Pol(')">+</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">Rec</span></div>
+        <button class="btn btn-op" onclick="handleKey('−', 'Rec(')">−</button>
+      </div>
+
+      <!-- Row 4 -->
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">Rnd#</span></div>
+        <button class="btn btn-num" onclick="handleKey('0', 'Rnd#')">0</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">π</span></div>
+        <button class="btn btn-num" onclick="handleKey('.', 'π')">.</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">mod</span></div>
+        <button class="btn btn-op" onclick="handleKey('EXP', 'mod')">EXP</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">drg.</span></div>
+        <button class="btn btn-op" onclick="handleKey('Ans', 'Ans')">ANS</button>
+      </div>
+      <div class="key-wrapper">
+        <div class="labels"><span class="lbl-s">%</span></div>
+        <button class="btn btn-op" onclick="handleEquals()">=</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Embedded Offline Service Worker (Required for PWA Installability)
+    if ("serviceWorker" in navigator) {
+      const swCode = `
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('activate', e => self.clients.claim());
+        self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+      `;
+      const blob = new Blob([swCode], { type: "text/javascript" });
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    }
+
+    // State Variables
+    let expr = "56622×6522";
+    let cursorIdx = expr.length;
+    let lastAns = 369288684;
+    let isShift = false;
+    let isAlpha = false;
+    let isHyp = false;
+    let isSto = false;
+    let isRcl = false;
+    let isPoweredOn = true;
+    let angleMode = "DEG";
+    let engStep = 0;
+    let lastEvaluatedValue = 369288684;
+
+    const registers = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, X: 0, Y: 0, Z: 0, M: 0 };
+    const historyList = ["56622×6522"];
+    let historyIdx = 1;
+
+    // DOM Elements
+    const exprLeft = document.getElementById("expr-left");
+    const exprRight = document.getElementById("expr-right");
+    const resEl = document.getElementById("res");
+    const lcd = document.getElementById("lcd");
+    const indShift = document.getElementById("ind-shift");
+    const indAlpha = document.getElementById("ind-alpha");
+    const indHyp = document.getElementById("ind-hyp");
+    const indMem = document.getElementById("ind-mem");
+    const indSto = document.getElementById("ind-sto");
+    const indRcl = document.getElementById("ind-rcl");
+    const indAngle = document.getElementById("ind-angle");
+    const btnShift = document.getElementById("btn-shift");
+    const btnAlpha = document.getElementById("btn-alpha");
+
+    function renderDisplay() {
+      exprLeft.innerText = expr.slice(0, cursorIdx);
+      exprRight.innerText = expr.slice(cursorIdx);
+    }
+
+    function insertAtCursor(text) {
+      if (!isPoweredOn) return;
+      if (text === "Rnd#") text = (Math.random()).toFixed(3);
+
+      expr = expr.slice(0, cursorIdx) + text + expr.slice(cursorIdx);
+      cursorIdx += text.length;
+      renderDisplay();
+    }
+
+    function deleteChar() {
+      if (!isPoweredOn || cursorIdx === 0) return;
+      expr = expr.slice(0, cursorIdx - 1) + expr.slice(cursorIdx);
+      cursorIdx--;
+      renderDisplay();
+    }
+
+    // D-Pad Navigation
+    function moveCursorLeft() {
+      if (!isPoweredOn) return;
+      if (cursorIdx > 0) cursorIdx--;
+      renderDisplay();
+    }
+
+    function moveCursorRight() {
+      if (!isPoweredOn) return;
+      if (cursorIdx < expr.length) cursorIdx++;
+      renderDisplay();
+    }
+
+    function historyBack() {
+      if (!isPoweredOn || historyList.length === 0) return;
+      if (historyIdx > 0) historyIdx--;
+      expr = historyList[historyIdx] || "";
+      cursorIdx = expr.length;
+      renderDisplay();
+    }
+
+    function historyForward() {
+      if (!isPoweredOn || historyList.length === 0) return;
+      if (historyIdx < historyList.length - 1) {
+        historyIdx++;
+        expr = historyList[historyIdx];
+      } else {
+        historyIdx = historyList.length;
+        expr = "";
+      }
+      cursorIdx = expr.length;
+      renderDisplay();
+    }
+
+    // Shift & Alpha toggles
+    function pressShift() {
+      if (!isPoweredOn) return;
+      isShift = !isShift;
+      if (isShift) isAlpha = false;
+      updateIndicators();
+    }
+
+    function pressAlpha() {
+      if (!isPoweredOn) return;
+      isAlpha = !isAlpha;
+      if (isAlpha) isShift = false;
+      updateIndicators();
+    }
+
+    function updateIndicators() {
+      indShift.className = isShift ? "ind-lit" : "ind-dim";
+      indAlpha.className = isAlpha ? "ind-lit" : "ind-dim";
+      indHyp.className = isHyp ? "ind-lit" : "ind-dim";
+      indSto.className = isSto ? "ind-lit" : "ind-dim";
+      indRcl.className = isRcl ? "ind-lit" : "ind-dim";
+      indMem.className = registers.M !== 0 ? "ind-lit" : "ind-dim";
+
+      btnShift.classList.toggle("active-btn", isShift);
+      btnAlpha.classList.toggle("active-btn", isAlpha);
+    }
+
+    function resetModifiers() {
+      isShift = false;
+      isAlpha = false;
+      isHyp = false;
+      isSto = false;
+      isRcl = false;
+      updateIndicators();
+    }
+
+    function toggleDRG() {
+      if (!isPoweredOn) return;
+      if (angleMode === "DEG") angleMode = "RAD";
+      else if (angleMode === "RAD") angleMode = "GRA";
+      else angleMode = "DEG";
+      indAngle.innerText = angleMode;
+    }
+
+    function pressAC() {
+      if (!isPoweredOn) {
+        isPoweredOn = true;
+        lcd.classList.remove("power-off");
+        return;
+      }
+      if (isShift) {
+        isPoweredOn = false;
+        resetModifiers();
+        lcd.classList.add("power-off");
+        return;
+      }
+      expr = "";
+      cursorIdx = 0;
+      resEl.innerText = "0";
+      engStep = 0;
+      resetModifiers();
+      renderDisplay();
+    }
+
+    function pressMode() {
+      if (!isPoweredOn) return;
+      if (isShift) {
+        for (let k in registers) registers[k] = 0;
+        pressAC();
+      } else {
+        toggleDRG();
+      }
+      resetModifiers();
+    }
+
+    function insertConstant() {
+      if (!isPoweredOn) return;
+      insertAtCursor("CONST(");
+    }
+
+    function handleKey(normal, shifted) {
+      if (!isPoweredOn) return;
+      let val = isShift ? shifted : normal;
+      insertAtCursor(val);
+      resetModifiers();
+    }
+
+    function handleVarKey(normal, varName) {
+      if (!isPoweredOn) return;
+      if (isSto) {
+        registers[varName] = lastEvaluatedValue;
+        resEl.innerText = `${varName}=` + formatNumber(lastEvaluatedValue);
+        resetModifiers();
+        return;
+      }
+      if (isRcl) {
+        insertAtCursor(String(registers[varName]));
+        resetModifiers();
+        return;
+      }
+      if (isAlpha) {
+        insertAtCursor(varName);
+        resetModifiers();
+        return;
+      }
+      if (normal === "ENG") {
+        applyEngNotation();
+        return;
+      }
+      if (normal === "(-)") {
+        insertAtCursor("-");
+        return;
+      }
+      insertAtCursor(normal);
+      resetModifiers();
+    }
+
+    function handleHypKey(varName) {
+      if (!isPoweredOn) return;
+      if (isAlpha) {
+        handleVarKey("", varName);
+        return;
+      }
+      isHyp = !isHyp;
+      updateIndicators();
+    }
+
+    function handleTrigKey(baseFunc, varName) {
+      if (!isPoweredOn) return;
+      if (isAlpha) {
+        handleVarKey("", varName);
+        return;
+      }
+
+      let func = baseFunc;
+      if (isHyp) func += "h";
+      if (isShift) func = "a" + func;
+
+      insertAtCursor(func + "(");
+      resetModifiers();
+    }
+
+    function handleStoRcl() {
+      if (!isPoweredOn) return;
+      if (isShift) {
+        isSto = true;
+        isRcl = false;
+      } else {
+        isRcl = true;
+        isSto = false;
+      }
+      updateIndicators();
+    }
+
+    function handleMemoryKey() {
+      if (!isPoweredOn) return;
+      if (isAlpha) {
+        insertAtCursor("M");
+      } else if (isShift) {
+        registers.M -= lastEvaluatedValue;
+      } else {
+        registers.M += lastEvaluatedValue;
+      }
+      updateIndicators();
+      resetModifiers();
+    }
+
+    function handleEquals() {
+      if (!isPoweredOn) return;
+      if (isShift) {
+        insertAtCursor("%");
+        resetModifiers();
+        return;
+      }
+      calculateResult();
+    }
+
+    // Long-Press System for Digits 1-9
+    document.querySelectorAll(".digit-key").forEach((btn) => {
+      let timer = null;
+      let isLongPressed = false;
+
+      const startHold = () => {
+        if (!isPoweredOn) return;
+        isLongPressed = false;
+
+        timer = setTimeout(() => {
+          isLongPressed = true;
+          const altChar = btn.dataset.alt;
+          if (navigator.vibrate) navigator.vibrate(35);
+          insertAtCursor(altChar);
+          resetModifiers();
+        }, 400);
+      };
+
+      const clearHold = () => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      };
+
+      btn.addEventListener("pointerdown", startHold);
+      btn.addEventListener("pointerup", () => {
+        clearHold();
+        if (!isPoweredOn) return;
+
+        if (!isLongPressed) {
+          const digit = btn.dataset.digit;
+          const alt = btn.dataset.alt;
+          if (isShift) {
+            insertAtCursor(alt);
+            resetModifiers();
+          } else {
+            insertAtCursor(digit);
+          }
+        }
+      });
+
+      btn.addEventListener("pointerleave", clearHold);
+      btn.addEventListener("pointercancel", clearHold);
+      btn.addEventListener("contextmenu", (e) => e.preventDefault());
+    });
+
+    // Engineering (ENG) Notation Toggle
+    function applyEngNotation() {
+      if (!isFinite(lastEvaluatedValue) || lastEvaluatedValue === 0) return;
+      engStep++;
+      let val = lastEvaluatedValue;
+      let exp = Math.floor(Math.log10(Math.abs(val)));
+      let engExp = Math.floor(exp / 3) * 3 + (engStep % 3) * 3;
+      let mantissa = val / Math.pow(10, engExp);
+      resEl.innerText = `${mantissa.toFixed(4)}×10^${engExp}`;
+    }
+
+    // Math Evaluation Engine
+    function toRad(val) {
+      if (angleMode === "DEG") return (val * Math.PI) / 180;
+      if (angleMode === "GRA") return (val * Math.PI) / 200;
+      return val;
+    }
+
+    function fromRad(val) {
+      if (angleMode === "DEG") return (val * 180) / Math.PI;
+      if (angleMode === "GRA") return (val * 200) / Math.PI;
+      return val;
+    }
+
+    const sin = (x) => Math.sin(toRad(x));
+    const cos = (x) => {
+      let v = Math.cos(toRad(x));
+      return Math.abs(v) < 1e-15 ? 0 : v;
+    };
+    const tan = (x) => Math.tan(toRad(x));
+    const asin = (x) => fromRad(Math.asin(x));
+    const acos = (x) => fromRad(Math.acos(x));
+    const atan = (x) => fromRad(Math.atan(x));
+
+    const sinh = (x) => Math.sinh(x);
+    const cosh = (x) => Math.cosh(x);
+    const tanh = (x) => Math.tanh(x);
+    const asinh = (x) => Math.asinh(x);
+    const acosh = (x) => Math.acosh(x);
+    const atanh = (x) => Math.atanh(x);
+
+    const ln = (x) => Math.log(x);
+    const log = (x) => Math.log10(x);
+    const sqrt = (x) => Math.sqrt(x);
+    const cbrt = (x) => Math.cbrt(x);
+
+    const fact = (n) => {
+      if (n < 0) return NaN;
+      if (n === 0 || n === 1) return 1;
+      let res = 1;
+      for (let i = 2; i <= n; i++) res *= i;
+      return res;
+    };
+
+    const nCr = (n, r) => fact(n) / (fact(r) * fact(n - r));
+    const nPr = (n, r) => fact(n) / fact(n - r);
+    const Pol = (x, y) => Math.hypot(x, y);
+    const Rec = (r, theta) => r * Math.cos(toRad(theta));
+
+    function formatNumber(num) {
+      if (isNaN(num)) return "Syntax ERROR";
+      if (!isFinite(num)) return "Math ERROR";
+      return Number(parseFloat(num.toFixed(10))).toLocaleString("en-US", {
+        maximumFractionDigits: 10
+      });
+    }
+
+    function calculateResult() {
+      try {
+        let code = expr;
+        if (!code.trim()) return;
+
+        // Metric Engineering Prefixes: T, G, M, k, m, μ, n, p, f
+        code = code.replace(/(\d+(\.\d+)?)T/g, "($1*1e12)")
+                   .replace(/(\d+(\.\d+)?)G/g, "($1*1e9)")
+                   .replace(/(\d+(\.\d+)?)M/g, "($1*1e6)")
+                   .replace(/(\d+(\.\d+)?)k/g, "($1*1e3)")
+                   .replace(/(\d+(\.\d+)?)m/g, "($1*1e-3)")
+                   .replace(/(\d+(\.\d+)?)μ/g, "($1*1e-6)")
+                   .replace(/(\d+(\.\d+)?)n/g, "($1*1e-9)")
+                   .replace(/(\d+(\.\d+)?)p/g, "($1*1e-12)")
+                   .replace(/(\d+(\.\d+)?)f/g, "($1*1e-15)");
+
+        // Variable Replacements
+        for (let k in registers) {
+          let reg = new RegExp(`\\b${k}\\b`, "g");
+          code = code.replace(reg, `(${registers[k]})`);
+        }
+
+        // Operators & Glyphs
+        code = code.replace(/×/g, "*")
+                   .replace(/÷/g, "/")
+                   .replace(/−/g, "-")
+                   .replace(/π/g, "Math.PI")
+                   .replace(/Ans/g, `(${lastAns})`)
+                   .replace(/EXP/g, "*10**")
+                   .replace(/mod/g, "%")
+                   .replace(/%/g, "*0.01")
+                   .replace(/³√\(/g, "cbrt(")
+                   .replace(/√\(/g, "sqrt(")
+                   .replace(/(\d+)\^2/g, "($1**2)")
+                   .replace(/(\d+)\^3/g, "($1**3)")
+                   .replace(/\^/g, "**")
+                   .replace(/(\d+)!/g, "fact($1)")
+                   .replace(/(\d+)nCr(\d+)/g, "nCr($1,$2)")
+                   .replace(/(\d+)nPr(\d+)/g, "nPr($1,$2)");
+
+        const evaluated = new Function(
+          "sin", "cos", "tan", "asin", "acos", "atan",
+          "sinh", "cosh", "tanh", "asinh", "acosh", "atanh",
+          "ln", "log", "sqrt", "cbrt", "fact", "nCr", "nPr", "Pol", "Rec",
+          `return ${code};`
+        )(sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh,
+          ln, log, sqrt, cbrt, fact, nCr, nPr, Pol, Rec);
+
+        lastEvaluatedValue = evaluated;
+        lastAns = evaluated;
+        resEl.innerText = formatNumber(evaluated);
+
+        if (historyList[historyList.length - 1] !== expr) {
+          historyList.push(expr);
+        }
+        historyIdx = historyList.length;
+      } catch (err) {
+        resEl.innerText = "Syntax ERROR";
+      }
+    }
+
+    // Physical Keyboard Support
+    document.addEventListener("keydown", (e) => {
+      if (!isPoweredOn) return;
+      if (e.key >= "0" && e.key <= "9") insertAtCursor(e.key);
+      else if (["+", "-", "*", "/", "(", ")", "^", ".", "%"].includes(e.key)) {
+        insertAtCursor(e.key === "*" ? "×" : e.key === "/" ? "÷" : e.key);
+      } else if (e.key === "Enter" || e.key === "=") {
+        e.preventDefault();
+        calculateResult();
+      } else if (e.key === "Backspace") {
+        deleteChar();
+      } else if (e.key === "ArrowLeft") {
+        moveCursorLeft();
+      } else if (e.key === "ArrowRight") {
+        moveCursorRight();
+      } else if (e.key === "ArrowUp") {
+        historyBack();
+      } else if (e.key === "ArrowDown") {
+        historyForward();
+      } else if (e.key === "Escape") {
+        pressAC();
+      }
+    });
+
+    renderDisplay();
+  </script>
+</body>
+</html>
